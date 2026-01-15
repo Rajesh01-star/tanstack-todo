@@ -1,5 +1,5 @@
 import { createServerFn, useServerFn } from '@tanstack/react-start'
-import { PlusIcon, SaveIcon } from 'lucide-react'
+import { PlusIcon, SaveIcon, TrashIcon } from 'lucide-react'
 import { FormEvent, useRef, useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -26,13 +26,22 @@ const updateTodo = createServerFn({ method: "POST" })
     z.object({
       id: z.string(),
       name: z.string().min(1),
+      isComplete: z.boolean(),
     })
   )
   .handler(async ({ data }) => {
     await db
       .update(todos)
-      .set({ name: data.name })
+      .set({ name: data.name, isComplete: data.isComplete })
       .where(eq(todos.id, data.id))
+
+    throw redirect({ to: "/" })
+  })
+
+const deleteTodo = createServerFn({ method: "POST" })
+  .inputValidator(z.object({ id: z.string() }))
+  .handler(async ({ data }) => {
+    await db.delete(todos).where(eq(todos.id, data.id))
 
     throw redirect({ to: "/" })
   })
@@ -40,8 +49,10 @@ const updateTodo = createServerFn({ method: "POST" })
 export function TodoForm({ todo }: { todo?: typeof todos.$inferSelect }) {
   const nameRef = useRef<HTMLInputElement>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isComplete, setIsComplete] = useState(todo?.isComplete ?? false)
   const addTodoFn = useServerFn(addTodo)
   const updateTodoFn = useServerFn(updateTodo)
+  const deleteTodoFn = useServerFn(deleteTodo)
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -51,7 +62,7 @@ export function TodoForm({ todo }: { todo?: typeof todos.$inferSelect }) {
 
     if (todo) {
       await updateTodoFn({
-        data: { id: todo.id, name },
+        data: { id: todo.id, name, isComplete },
       })
     } else {
       await addTodoFn({ data: { name } })
@@ -60,8 +71,42 @@ export function TodoForm({ todo }: { todo?: typeof todos.$inferSelect }) {
     setIsLoading(false)
   }
 
+  const handleDelete = async () => {
+    if (!todo) return
+    setIsLoading(true)
+    await deleteTodoFn({ data: { id: todo.id } })
+    setIsLoading(false)
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <div className="space-y-4">
+      {todo && (
+        <div className="flex items-center justify-between p-2 border rounded-md bg-muted/50">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="isComplete"
+              checked={isComplete}
+              onChange={(e) => setIsComplete(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <label htmlFor="isComplete" className="text-sm font-medium">
+              Mark as complete
+            </label>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={isLoading}
+          >
+            <TrashIcon className="w-4 h-4 mr-2" />
+            Delete
+          </Button>
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="flex gap-2">
       <Input
         autoFocus
         ref={nameRef}
@@ -78,5 +123,6 @@ export function TodoForm({ todo }: { todo?: typeof todos.$inferSelect }) {
         {todo ? <SaveIcon /> : <PlusIcon />} {todo ? "Save" : "Add"}
       </Button>
     </form>
+    </div>
   )
 }
