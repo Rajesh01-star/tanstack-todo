@@ -25,10 +25,15 @@ import { eq, desc } from 'drizzle-orm'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
 
-const serverLoader = createServerFn({ method: 'GET' }).handler(() => {
-  return db.query.todos.findMany({
-    orderBy: desc(todosSchema.createdAt),
-  })
+const serverLoader = createServerFn({ method: 'GET' }).handler(async () => {
+  try {
+    return await db.query.todos.findMany({
+      orderBy: desc(todosSchema.createdAt),
+    })
+  } catch (e) {
+    console.error('Failed to fetch todos:', e)
+    throw e
+  }
 })
 
 const toggleTodo = createServerFn({ method: "POST" })
