@@ -1,9 +1,9 @@
 import { drizzle } from 'drizzle-orm/node-postgres'
-import pg from 'pg'
+import pkg from 'pg'
 import * as dotenv from 'dotenv'
 
 dotenv.config()
-const { Pool } = pg
+const { Pool } = pkg
 
 import * as schema from './schema'
 
