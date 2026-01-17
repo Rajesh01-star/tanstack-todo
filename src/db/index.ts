@@ -1,15 +1,13 @@
-import { drizzle } from 'drizzle-orm/node-postgres'
-import { Pool } from 'pg'
+import { neon } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/neon-http'
 import * as schema from './schema'
 
 const connectionString = process.env.DATABASE_URL || process.env.VITE_DATABASE_URL
 
 if (!connectionString) {
-  console.error('DATABASE_URL or VITE_DATABASE_URL is missing')
+  throw new Error('DATABASE_URL or VITE_DATABASE_URL is missing')
 }
 
-const pool = new Pool({
-  connectionString: connectionString || '',
-})
+const client = neon(connectionString)
 
-export const db = drizzle(pool, { schema })
+export const db = drizzle(client, { schema })
